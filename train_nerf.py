@@ -11,9 +11,9 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm, trange
 
 from nerf import (CfgNode, get_embedding_function, get_ray_bundle, img2mse,
-                  load_blender_data, load_llff_data, meshgrid_xy, models,
+                  load_blender_data, load_llff_data, models,
                   mse2psnr, run_one_iter_of_nerf)
-
+from nerf.utils import get_device
 
 def main():
 
@@ -94,11 +94,8 @@ def main():
     torch.manual_seed(seed)
 
     # Device on which to run.
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-
+    device = get_device()
+    
     encode_position_fn = get_embedding_function(
         num_encoding_functions=cfg.models.coarse.num_encoding_fn_xyz,
         include_input=cfg.models.coarse.include_input_xyz,
@@ -212,7 +209,7 @@ def main():
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
-                meshgrid_xy(torch.arange(H).to(device), torch.arange(W).to(device)),
+                torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device), indexing="xy"),
                 dim=-1,
             )
             coords = coords.reshape((-1, 2))

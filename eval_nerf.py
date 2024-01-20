@@ -18,7 +18,7 @@ from nerf import (
     get_embedding_function,
     run_one_iter_of_nerf,
 )
-
+from nerf.utils import get_device
 
 def cast_to_image(tensor, dataset_type):
     # Input tensor is (H, W, 3). Convert to (3, H, W).
@@ -85,10 +85,8 @@ def main():
         render_poses = torch.from_numpy(render_poses)
 
     # Device on which to run.
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda"
-
+    device = get_device()
+    
     encode_position_fn = get_embedding_function(
         num_encoding_functions=cfg.models.coarse.num_encoding_fn_xyz,
         include_input=cfg.models.coarse.include_input_xyz,

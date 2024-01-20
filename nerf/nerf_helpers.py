@@ -3,9 +3,6 @@ from typing import Optional
 
 import torch
 
-import torchsearchsorted
-
-
 def img2mse(img_src, img_tgt):
     return torch.nn.functional.mse_loss(img_src, img_tgt)
 
@@ -23,21 +20,6 @@ def get_minibatches(inputs: torch.Tensor, chunksize: Optional[int] = 1024 * 8):
     `chunksize`.
     """
     return [inputs[i : i + chunksize] for i in range(0, inputs.shape[0], chunksize)]
-
-
-def meshgrid_xy(
-    tensor1: torch.Tensor, tensor2: torch.Tensor
-) -> (torch.Tensor, torch.Tensor):
-    """Mimick np.meshgrid(..., indexing="xy") in pytorch. torch.meshgrid only allows "ij" indexing.
-    (If you're unsure what this means, safely skip trying to understand this, and run a tiny example!)
-
-    Args:
-      tensor1 (torch.Tensor): Tensor whose elements define the first dimension of the returned meshgrid.
-      tensor2 (torch.Tensor): Tensor whose elements define the second dimension of the returned meshgrid.
-    """
-    # TESTED
-    ii, jj = torch.meshgrid(tensor1, tensor2)
-    return ii.transpose(-1, -2), jj.transpose(-1, -2)
 
 
 def cumprod_exclusive(tensor: torch.Tensor) -> torch.Tensor:
@@ -87,13 +69,14 @@ def get_ray_bundle(
       (TODO: double check if explanation of row and col indices convention is right).
     """
     # TESTED
-    ii, jj = meshgrid_xy(
+    ii, jj = torch.meshgrid(
         torch.arange(
             width, dtype=tform_cam2world.dtype, device=tform_cam2world.device
         ).to(tform_cam2world),
         torch.arange(
             height, dtype=tform_cam2world.dtype, device=tform_cam2world.device
         ),
+        indexing="xy"
     )
     directions = torch.stack(
         [
@@ -238,7 +221,7 @@ def sample_pdf(bins, weights, num_samples, det=False):
         u = torch.rand(list(cdf.shape[:-1]) + [num_samples]).to(weights)
 
     # Invert CDF
-    inds = torchsearchsorted.searchsorted(
+    inds = torch.searchsorted(
         cdf.contiguous(), u.contiguous(), side="right"
     )
     below = torch.max(torch.zeros_like(inds), inds - 1)
@@ -285,7 +268,7 @@ def sample_pdf_2(bins, weights, num_samples, det=False):
     # Invert CDF
     u = u.contiguous()
     cdf = cdf.contiguous()
-    inds = torchsearchsorted.searchsorted(cdf, u, side="right")
+    inds = torch.searchsorted(cdf, u, side="right")
     below = torch.max(torch.zeros_like(inds - 1), inds - 1)
     above = torch.min((cdf.shape[-1] - 1) * torch.ones_like(inds), inds)
     inds_g = torch.stack((below, above), dim=-1)  # (batchsize, num_samples, 2)

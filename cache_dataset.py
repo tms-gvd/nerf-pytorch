@@ -10,8 +10,8 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from nerf import get_ray_bundle, load_blender_data, load_llff_data, meshgrid_xy
-
+from nerf import get_ray_bundle, load_blender_data, load_llff_data
+from nerf.utils import get_device
 
 def cache_nerf_dataset(args):
 
@@ -56,23 +56,20 @@ def cache_nerf_dataset(args):
         poses = torch.from_numpy(poses)
 
     # Device on which to run.
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-
+    device = get_device()
+    
     os.makedirs(os.path.join(args.savedir, "train"), exist_ok=True)
     os.makedirs(os.path.join(args.savedir, "val"), exist_ok=True)
     os.makedirs(os.path.join(args.savedir, "test"), exist_ok=True)
     np.random.seed(args.randomseed)
 
-    for img_idx in tqdm(i_train):
+    for img_idx in tqdm(i_train, desc="Caching train data"):
         for j in range(args.num_variations):
             img_target = images[img_idx].to(device)
             pose_target = poses[img_idx, :3, :4].to(device)
             ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)
             coords = torch.stack(
-                meshgrid_xy(torch.arange(H).to(device), torch.arange(W).to(device)),
+                torch.meshgrid(torch.arange(H).to(device), torch.arange(W).to(device), indexing="xy"),
                 dim=-1,
             )
             coords = coords.reshape((-1, 2))
@@ -117,7 +114,7 @@ def cache_nerf_dataset(args):
             if args.sample_all is True:
                 break
 
-    for img_idx in tqdm(i_val):
+    for img_idx in tqdm(i_val, desc="Caching val data"):
         img_target = images[img_idx].to(device)
         pose_target = poses[img_idx, :3, :4].to(device)
         ray_origins, ray_directions = get_ray_bundle(H, W, focal, pose_target)

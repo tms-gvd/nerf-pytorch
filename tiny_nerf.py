@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm, trange
 
 from nerf import cumprod_exclusive, get_minibatches, get_ray_bundle, positional_encoding
-
+from nerf.utils import get_device
 
 def compute_query_points_from_rays(
     ray_origins: torch.Tensor,
@@ -184,8 +184,9 @@ class VeryTinyNerfModel(torch.nn.Module):
 def main():
 
     # Determine device to run on (GPU vs CPU)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    device = get_device()
+    float_dtype = torch.float32 if device == "mps" else torch.float64
+    
     # Log directory
     logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cache", "log")
     os.makedirs(logdir, exist_ok=True)
@@ -194,7 +195,7 @@ def main():
     Load input images and poses
     """
 
-    data = np.load("cache/tiny_nerf_data.npz")
+    data = np.load("tiny_nerf_data.npz")
 
     # Images
     images = data["images"]
@@ -203,7 +204,7 @@ def main():
     tform_cam2world = torch.from_numpy(tform_cam2world).to(device)
     # Focal length (intrinsics)
     focal_length = data["focal"]
-    focal_length = torch.from_numpy(focal_length).to(device)
+    focal_length = torch.from_numpy(focal_length).to(float_dtype).to(device)
 
     # Height and width of each image
     height, width = images.shape[1:3]

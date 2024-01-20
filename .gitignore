@@ -133,3 +133,13 @@ dmypy.json
 cache/
 data/
 logs/
+
+# test files
+__*.py
+
+# vscode
+.vscode/
+
+# notebooks
+.ipynb_checkpoints/
+*.ipynb
